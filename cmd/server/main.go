@@ -2,25 +2,18 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 
 	"github.com/whiterthanwhite/businessinsight/internal/db"
+	"github.com/whiterthanwhite/businessinsight/internal/entities/currency"
+	"github.com/whiterthanwhite/businessinsight/internal/middleware"
 )
-
-type ServerLogger struct {
-	Handler http.Handler
-}
-
-func (s *ServerLogger) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	log.Printf("Request URI: %s\n", req.RequestURI)
-	log.Printf("Method: %s\n", req.Method)
-
-	s.Handler.ServeHTTP(w, req)
-}
 
 func main() {
 	dbConnectionStr := os.Getenv("DBCONNECTIONSTR")
@@ -37,7 +30,7 @@ func main() {
 		cancel()
 	}()
 
-	conn, err := db.Conntect(ctx, dbConnectionStr)
+	conn, err := db.Connect(ctx, dbConnectionStr)
 	if err != nil {
 		panic(err)
 	}
@@ -63,8 +56,44 @@ func main() {
 		}
 		w.Write([]byte(sqlMessage))
 	})
+	mux.HandleFunc("/currency/add", func(w http.ResponseWriter, req *http.Request) {
+		currenciesJSON, err := io.ReadAll(req.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
-	sl := &ServerLogger{
+		currencies, err := currency.ParseJSON(currenciesJSON)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		err = conn.InsertCurrency(ctx, currencies)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		log.Println("currencies added")
+	})
+	mux.HandleFunc("/currencies", func(w http.ResponseWriter, req *http.Request) {
+		currencies, err := conn.GetCurrencies(ctx)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		currenciesJSON, err := json.Marshal(currencies)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Write(currenciesJSON)
+	})
+
+	sl := &middleware.ServerLogger{
 		Handler: mux,
 	}
 

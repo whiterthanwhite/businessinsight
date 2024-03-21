@@ -4,7 +4,7 @@ const (
 	operationType = `
 		CREATE TYPE operation_type AS ENUM ('Expense', 'Income', 'Transfer');
 	`
-	currency = `
+	currencySQL = `
 		CREATE TABLE currency (
 			code char(10) PRIMARY KEY CHECK (code <> ''),
 			description varchar(30));
