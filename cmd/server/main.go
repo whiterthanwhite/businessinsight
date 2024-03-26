@@ -2,16 +2,14 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 
 	"github.com/whiterthanwhite/businessinsight/internal/db"
-	"github.com/whiterthanwhite/businessinsight/internal/entities/currency"
+	"github.com/whiterthanwhite/businessinsight/internal/handlerfunctions"
 	"github.com/whiterthanwhite/businessinsight/internal/middleware"
 )
 
@@ -41,6 +39,32 @@ func main() {
 		log.Fatalln(err)
 	}
 
+	mux := createCustomMux(ctx)
+
+	rh := &middleware.ReactHelper{
+		Handler: mux,
+	}
+	sl := &middleware.ServerLogger{
+		Handler: rh,
+	}
+
+	go func() {
+		log.Println("Server started")
+		if err := http.ListenAndServe(":8080", sl); err != nil {
+			fmt.Println(err)
+		}
+	}()
+
+	<-ctx.Done()
+	fmt.Print("\r")
+	log.Println("Server stopped")
+}
+
+func createCustomMux(parentCtx context.Context) *http.ServeMux {
+	ctx, cancel := context.WithCancel(parentCtx)
+	defer cancel()
+
+	conn := db.GetInstance()
 	mux := http.NewServeMux()
 	mux.HandleFunc("/helloworld", func(w http.ResponseWriter, req *http.Request) {
 		sqlMessage, err := conn.HelloWorld(ctx)
@@ -56,55 +80,10 @@ func main() {
 		}
 		w.Write([]byte(sqlMessage))
 	})
-	mux.HandleFunc("/currency/add", func(w http.ResponseWriter, req *http.Request) {
-		currenciesJSON, err := io.ReadAll(req.Body)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
 
-		currencies, err := currency.ParseJSON(currenciesJSON)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+	mux.HandleFunc("/currencies/add", handlerfunctions.AddCurrenciesHandlerFunc())
+	mux.HandleFunc("/currencies", handlerfunctions.GetCurrenciesHandlerFunc())
+	mux.HandleFunc("/currencies/delete", handlerfunctions.DeleteCurrenciesHandlerFunc())
 
-		err = conn.InsertCurrency(ctx, currencies)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		log.Println("currencies added")
-	})
-	mux.HandleFunc("/currencies", func(w http.ResponseWriter, req *http.Request) {
-		currencies, err := conn.GetCurrencies(ctx)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		currenciesJSON, err := json.Marshal(currencies)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.Write(currenciesJSON)
-	})
-
-	sl := &middleware.ServerLogger{
-		Handler: mux,
-	}
-
-	go func() {
-		log.Println("Server started")
-		if err := http.ListenAndServe(":8080", sl); err != nil {
-			fmt.Println(err)
-		}
-	}()
-
-	<-ctx.Done()
-	fmt.Print("\r")
-	log.Println("Server stopped")
+	return mux
 }

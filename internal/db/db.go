@@ -2,13 +2,10 @@ package db
 
 import (
 	"context"
-	"errors"
 	"log"
 	"time"
 
 	"github.com/jackc/pgx/v5"
-
-	"github.com/whiterthanwhite/businessinsight/internal/entities/currency"
 )
 
 var dbConn *databaseConnection
@@ -44,59 +41,6 @@ func (c *databaseConnection) CurrentTime(parentCtx context.Context) (string, err
 		return "", err
 	}
 	return message, nil
-}
-
-func (c *databaseConnection) InsertCurrency(parentCtx context.Context, currencies []currency.Currency) error {
-	if len(currencies) == 0 {
-		return nil
-	}
-
-	ctx, cancel := context.WithCancel(parentCtx)
-	defer cancel()
-
-	tx, err := c.conn.Begin(ctx)
-	if err != nil {
-		return err
-	}
-
-	for _, curr := range currencies {
-		_, err = tx.Exec(ctx, "INSERT INTO currency VALUES ($1, $2);", curr.Code, curr.Description)
-		if err != nil {
-			tErr := errors.Join(err)
-			err = tx.Rollback(ctx)
-			tErr = errors.Join(tErr, err)
-			return tErr
-		}
-	}
-
-	err = tx.Commit(ctx)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (c *databaseConnection) GetCurrencies(parentCtx context.Context) ([]currency.Currency, error) {
-	ctx, cancel := context.WithCancel(parentCtx)
-	defer cancel()
-
-	rows, err := c.conn.Query(ctx, "SELECT * FROM currency;")
-	if err != nil {
-		return nil, err
-	}
-
-	var currencies []currency.Currency
-	for rows.Next() {
-		curr := currency.Currency{}
-		err = rows.Scan(&curr.Code, &curr.Description)
-		if err != nil {
-			return nil, err
-		}
-		currencies = append(currencies, curr)
-	}
-
-	return currencies, nil
 }
 
 func (c *databaseConnection) InitTables(parentCtx context.Context) error {
@@ -173,7 +117,7 @@ func Connect(parentCtx context.Context, connectionStr string) (*databaseConnecti
 		return dbConn, nil
 	}
 	ctx, _ := context.WithCancel(parentCtx)
-	dbConn := new(databaseConnection)
+	dbConn = new(databaseConnection)
 	var err error
 	dbConn.conn, err = pgx.Connect(ctx, connectionStr)
 	if err != nil {
