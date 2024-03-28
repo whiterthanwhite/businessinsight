@@ -2,7 +2,9 @@ package db
 
 import (
 	"context"
+	"errors"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -11,7 +13,8 @@ import (
 var dbConn *databaseConnection
 
 type databaseConnection struct {
-	conn *pgx.Conn
+	conn  *pgx.Conn
+	mutex sync.Mutex
 }
 
 func (c *databaseConnection) Close(parentCtx context.Context) error {
@@ -78,7 +81,7 @@ func (c *databaseConnection) InitTables(parentCtx context.Context) error {
 		return err
 	}
 	if count == 0 {
-		_, err = c.conn.Exec(ctx, account)
+		_, err = c.conn.Exec(ctx, accountSQL)
 		if err != nil {
 			return err
 		}
@@ -126,6 +129,9 @@ func Connect(parentCtx context.Context, connectionStr string) (*databaseConnecti
 	return dbConn, nil
 }
 
-func GetInstance() *databaseConnection {
-	return dbConn
+func GetInstance() (*databaseConnection, error) {
+	if dbConn == nil {
+		return nil, errors.New("database variable was not initialized")
+	}
+	return dbConn, nil
 }

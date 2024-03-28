@@ -9,7 +9,7 @@ const (
 			code varchar(10) PRIMARY KEY CHECK (code <> ''),
 			description varchar(30));
 	`
-	account = `
+	accountSQL = `
 		CREATE TABLE account (
 			id smallserial PRIMARY KEY,
 			name varchar(30) NOT NULL,

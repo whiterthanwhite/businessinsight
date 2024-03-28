@@ -39,7 +39,10 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	mux := createCustomMux(ctx)
+	mux, err := createCustomMux(ctx)
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	rh := &middleware.ReactHelper{
 		Handler: mux,
@@ -60,11 +63,15 @@ func main() {
 	log.Println("Server stopped")
 }
 
-func createCustomMux(parentCtx context.Context) *http.ServeMux {
+func createCustomMux(parentCtx context.Context) (*http.ServeMux, error) {
 	ctx, cancel := context.WithCancel(parentCtx)
 	defer cancel()
 
-	conn := db.GetInstance()
+	conn, err := db.GetInstance()
+	if err != nil {
+		return nil, err
+	}
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/helloworld", func(w http.ResponseWriter, req *http.Request) {
 		sqlMessage, err := conn.HelloWorld(ctx)
@@ -85,5 +92,9 @@ func createCustomMux(parentCtx context.Context) *http.ServeMux {
 	mux.HandleFunc("/currencies", handlerfunctions.GetCurrenciesHandlerFunc())
 	mux.HandleFunc("/currencies/delete", handlerfunctions.DeleteCurrenciesHandlerFunc())
 
-	return mux
+	mux.HandleFunc("/accounts", handlerfunctions.GetAccountsHandlerFunction())
+	mux.HandleFunc("/accounts/add", handlerfunctions.AddAccountsHandlerFunction())
+	mux.HandleFunc("/accounts/delete", handlerfunctions.DeleteAccountsHandlerFunction())
+
+	return mux, nil
 }

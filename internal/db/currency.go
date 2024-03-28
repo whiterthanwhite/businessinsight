@@ -4,76 +4,24 @@ import (
 	"context"
 	"errors"
 	"log"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/whiterthanwhite/businessinsight/internal/entities/currency"
 )
 
-func (c *databaseConnection) InsertCurrency(parentCtx context.Context, currencies []currency.Currency) error {
-	if len(currencies) == 0 {
-		return nil
-	}
-
+func (d *databaseConnection) GetCurrencies(parentCtx context.Context) ([]currency.Currency, error) {
 	ctx, cancel := context.WithCancel(parentCtx)
 	defer cancel()
 
-	tx, err := c.conn.Begin(ctx)
-	if err != nil {
-		return err
-	}
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
 
-	log.Println(currencies)
-	for _, curr := range currencies {
-		xCurrency, err := c.currencyExist(ctx, &curr)
-		if err != nil {
-			tErr := errors.Join(err)
-			err = tx.Rollback(ctx)
-			tErr = errors.Join(tErr, err)
-			return tErr
-		}
-		if xCurrency != nil {
-			needUpdate := false
-			if xCurrency.Description != curr.Description {
-				needUpdate = true
-			}
-			if needUpdate {
-				log.Println("Update")
-				_, err = tx.Exec(ctx, "UPDATE currency SET description = $1 WHERE code = $2;", curr.Description, curr.Code)
-				if err != nil {
-					tErr := errors.Join(err)
-					err = tx.Rollback(ctx)
-					tErr = errors.Join(tErr, err)
-					return tErr
-				}
-			}
-		} else {
-			log.Println("Insert")
-			_, err = tx.Exec(ctx, "INSERT INTO currency VALUES ($1, $2);", curr.Code, curr.Description)
-			if err != nil {
-				tErr := errors.Join(err)
-				err = tx.Rollback(ctx)
-				tErr = errors.Join(tErr, err)
-				return tErr
-			}
-		}
-	}
-
-	err = tx.Commit(ctx)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (c *databaseConnection) GetCurrencies(parentCtx context.Context) ([]currency.Currency, error) {
-	ctx, cancel := context.WithCancel(parentCtx)
-	defer cancel()
-
-	rows, err := c.conn.Query(ctx, "SELECT * FROM currency;")
+	rows, err := d.conn.Query(ctx, "SELECT * FROM currency;")
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	var currencies []currency.Currency
 	for rows.Next() {
@@ -88,7 +36,48 @@ func (c *databaseConnection) GetCurrencies(parentCtx context.Context) ([]currenc
 	return currencies, nil
 }
 
-func (c *databaseConnection) DeleteCurrencies(parentCtx context.Context, currencies []currency.Currency) error {
+func (d *databaseConnection) GetCurrency(parentCtx context.Context, newCurrency *currency.Currency) (*currency.Currency, error) {
+	log.Println("start function GetCurrency")
+	defer log.Println("end function GetCurrency")
+
+	ctx, cancel := context.WithCancel(parentCtx)
+	defer cancel()
+
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
+	xCurrency := new(currency.Currency)
+	err := d.conn.QueryRow(ctx, "SELECT * FROM currency WHERE code = $1;", newCurrency.Code).Scan(&xCurrency.Code, &xCurrency.Description)
+	if err != nil && err != pgx.ErrNoRows {
+		return nil, err
+	}
+	if err == pgx.ErrNoRows {
+		return nil, nil
+	}
+
+	return xCurrency, nil
+}
+
+func (d *databaseConnection) InsertCurrency(parentCtx context.Context, newCurrency *currency.Currency) error {
+	log.Println("start function InsertCurrency")
+	defer log.Println("end function InsertCurrency")
+
+	ctx, cancel := context.WithCancel(parentCtx)
+	defer cancel()
+
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
+	newCurrency.Code = strings.ToUpper(newCurrency.Code)
+	_, err := d.conn.Exec(ctx, "INSERT INTO currency VALUES ($1, $2);", &newCurrency.Code, &newCurrency.Description)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d *databaseConnection) DeleteCurrencies(parentCtx context.Context, currencies []currency.Currency) error {
 	if len(currencies) == 0 {
 		return nil
 	}
@@ -96,27 +85,21 @@ func (c *databaseConnection) DeleteCurrencies(parentCtx context.Context, currenc
 	ctx, cancel := context.WithCancel(parentCtx)
 	defer cancel()
 
-	tx, err := c.conn.Begin(ctx)
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
+	tx, err := d.conn.Begin(ctx)
 	if err != nil {
 		return err
 	}
 
 	for _, curr := range currencies {
-		xCurrency, err := c.currencyExist(ctx, &curr)
+		_, err := tx.Exec(ctx, "DELETE FROM currency WHERE code = $1;", curr.Code)
 		if err != nil {
 			tErr := errors.Join(err)
 			err = tx.Rollback(ctx)
 			tErr = errors.Join(tErr, err)
 			return tErr
-		}
-		if xCurrency != nil {
-			_, err := tx.Exec(ctx, "DELETE FROM currency WHERE code = $1;", curr.Code)
-			if err != nil {
-				tErr := errors.Join(err)
-				err = tx.Rollback(ctx)
-				tErr = errors.Join(tErr, err)
-				return tErr
-			}
 		}
 	}
 
@@ -128,22 +111,20 @@ func (c *databaseConnection) DeleteCurrencies(parentCtx context.Context, currenc
 	return nil
 }
 
-func (c *databaseConnection) currencyExist(parentCtx context.Context, newCurrency *currency.Currency) (*currency.Currency, error) {
+func (d *databaseConnection) UpdateCurrency(parentCtx context.Context, newCurrency *currency.Currency) error {
+	log.Println("start function UpdateCurrency")
+	defer log.Println("end function UpdateCurrency")
+
 	ctx, cancel := context.WithCancel(parentCtx)
 	defer cancel()
 
-	var xCurrency *currency.Currency
-	var code, description string
-	err := c.conn.QueryRow(ctx, "SELECT * FROM currency WHERE code = $1;", newCurrency.Code).Scan(&code, &description)
-	if err != nil && err != pgx.ErrNoRows {
-		return nil, err
-	}
-	if err != pgx.ErrNoRows {
-		xCurrency = &currency.Currency{
-			Code:        code,
-			Description: description,
-		}
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
+	_, err := d.conn.Exec(ctx, "UPDATE currency SET description = $1 WHERE code = $2;", &newCurrency.Description, &newCurrency.Code)
+	if err != nil {
+		return err
 	}
 
-	return xCurrency, nil
+	return nil
 }
