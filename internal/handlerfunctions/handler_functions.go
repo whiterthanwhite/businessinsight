@@ -9,6 +9,7 @@ import (
 
 	"github.com/whiterthanwhite/businessinsight/internal/db"
 	"github.com/whiterthanwhite/businessinsight/internal/entities/account"
+	"github.com/whiterthanwhite/businessinsight/internal/entities/category"
 	"github.com/whiterthanwhite/businessinsight/internal/entities/currency"
 )
 
@@ -251,5 +252,134 @@ func DeleteAccountsHandlerFunction() http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+	}
+}
+
+// category handler fucntions
+func AddCategoryHandlerFunction() http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+
+		requestBody, err := io.ReadAll(req.Body)
+		if err != nil {
+			log.Println(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		categories, err := category.ParseJSON(requestBody)
+		if err != nil {
+			log.Println(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		conn, err := db.GetInstance()
+		if err != nil {
+			log.Println(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		for _, category := range categories {
+			xCategory, err := conn.GetCategory(ctx, &category)
+			if err != nil {
+				log.Println(err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if xCategory != nil {
+				if xCategory.Type != category.Type || xCategory.Name != category.Name ||
+					xCategory.Description != category.Description {
+
+					err = conn.UpdateCategory(ctx, &category)
+					if err != nil {
+						log.Println(err)
+						http.Error(w, err.Error(), http.StatusInternalServerError)
+						return
+					}
+				}
+			} else {
+				err = conn.InsertCategory(ctx, &category)
+				if err != nil {
+					log.Println(err)
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+			}
+		}
+
+		w.WriteHeader(http.StatusOK)
+		log.Println(`categories were added`)
+	}
+}
+
+func GetCategoriesHandlerFunction() http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+
+		conn, err := db.GetInstance()
+		if err != nil {
+			log.Println(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		categories, err := conn.GetCategories(ctx)
+		if err != nil {
+			log.Println(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		responseBody, err := json.Marshal(&categories)
+		if err != nil {
+			log.Println(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Write(responseBody)
+	}
+}
+
+func DeleteCategoriesHandlerFunctions() http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+
+		requestBody, err := io.ReadAll(req.Body)
+		if err != nil {
+			log.Println(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		categories, err := category.ParseJSON(requestBody)
+		if err != nil {
+			log.Println(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		conn, err := db.GetInstance()
+		if err != nil {
+			log.Println(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		for _, category := range categories {
+			err = conn.DeleteCategory(ctx, &category)
+			if err != nil {
+				log.Println(err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		}
+
+		w.WriteHeader(http.StatusOK)
 	}
 }

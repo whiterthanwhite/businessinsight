@@ -1,28 +1,28 @@
 package db
 
 const (
-	operationType = `
+	QUERY_CREATE_OPERATION_TYPE = `
 		CREATE TYPE operation_type AS ENUM ('Expense', 'Income', 'Transfer');
 	`
-	currencySQL = `
+	QUERY_CREATE_TABLE_CURRENCY = `
 		CREATE TABLE currency (
 			code varchar(10) PRIMARY KEY CHECK (code <> ''),
 			description varchar(30));
 	`
-	accountSQL = `
+	QUERY_CREATE_TABLE_ACCOUNT = `
 		CREATE TABLE account (
 			id smallserial PRIMARY KEY,
 			name varchar(30) NOT NULL,
 			currency_code varchar(10) REFERENCES currency);
 	`
-	category = `
+	QUERY_CREATE_TABLE_CATEGORY = `
 		CREATE TABLE category (
 			id smallserial PRIMARY KEY,
 			type operation_type NOT NULL,
 			name varchar(30) NOT NULL,
 			description varchar(250));
 	`
-	operation = `
+	QUERY_CREATE_TABLE_OPERATION = `
 		CREATE TABLE operation (
 			entry_no bigserial PRIMARY KEY,
 			date_time timestamp,

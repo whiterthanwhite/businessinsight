@@ -57,7 +57,7 @@ func (c *databaseConnection) InitTables(parentCtx context.Context) error {
 		return err
 	}
 	if count == 0 {
-		_, err = c.conn.Exec(ctx, operationType)
+		_, err = c.conn.Exec(ctx, QUERY_CREATE_OPERATION_TYPE)
 		if err != nil {
 			return err
 		}
@@ -69,7 +69,7 @@ func (c *databaseConnection) InitTables(parentCtx context.Context) error {
 		return err
 	}
 	if count == 0 {
-		_, err = c.conn.Exec(ctx, currencySQL)
+		_, err = c.conn.Exec(ctx, QUERY_CREATE_TABLE_CURRENCY)
 		if err != nil {
 			return err
 		}
@@ -81,7 +81,7 @@ func (c *databaseConnection) InitTables(parentCtx context.Context) error {
 		return err
 	}
 	if count == 0 {
-		_, err = c.conn.Exec(ctx, accountSQL)
+		_, err = c.conn.Exec(ctx, QUERY_CREATE_TABLE_ACCOUNT)
 		if err != nil {
 			return err
 		}
@@ -93,7 +93,7 @@ func (c *databaseConnection) InitTables(parentCtx context.Context) error {
 		return err
 	}
 	if count == 0 {
-		_, err = c.conn.Exec(ctx, category)
+		_, err = c.conn.Exec(ctx, QUERY_CREATE_TABLE_CATEGORY)
 		if err != nil {
 			return err
 		}
@@ -105,7 +105,7 @@ func (c *databaseConnection) InitTables(parentCtx context.Context) error {
 		return err
 	}
 	if count == 0 {
-		_, err = c.conn.Exec(ctx, operation)
+		_, err = c.conn.Exec(ctx, QUERY_CREATE_TABLE_OPERATION)
 		if err != nil {
 			return err
 		}
