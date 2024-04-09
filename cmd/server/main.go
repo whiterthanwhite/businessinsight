@@ -100,5 +100,9 @@ func createCustomMux(parentCtx context.Context) (*http.ServeMux, error) {
 	mux.HandleFunc("/categories/add", handlerfunctions.AddCategoryHandlerFunction())
 	mux.HandleFunc("/categories/delete", handlerfunctions.DeleteCategoriesHandlerFunctions())
 
+	mux.HandleFunc("/operations", handlerfunctions.GetOperationsHandlerFunction())
+	mux.HandleFunc("/operations/add", handlerfunctions.AddOperationsHandlerFunction())
+	mux.HandleFunc("/operations/delete", handlerfunctions.DeleteOperationsHandlerFunction())
+
 	return mux, nil
 }
