@@ -525,3 +525,34 @@ func DeleteOperationsHandlerFunction() http.HandlerFunc {
 		}
 	}
 }
+
+// Statics handler functions
+func GetAccountStatisticsHandlerFunction() http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+
+		conn, err := db.GetInstance()
+		if err != nil {
+			log.Println(err.Error())
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		accountsStatistics, err := conn.GetAccountStatistics(ctx)
+		if err != nil {
+			log.Println(err.Error())
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		responseBodyJson, err := json.Marshal(&accountsStatistics)
+		if err != nil {
+			log.Println(err.Error())
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		rw.Write(responseBodyJson)
+	}
+}

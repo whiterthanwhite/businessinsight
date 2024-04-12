@@ -27,7 +27,7 @@ const (
 			entry_no bigserial PRIMARY KEY,
 			date_time timestamp,
 			type operation_type NOT NULL,
-			amount real,
+			amount double precision,
 			source_id smallint REFERENCES account,
 			currency_code varchar(10) REFERENCES currency,
 			category_id smallint REFERENCES category,

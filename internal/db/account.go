@@ -42,7 +42,7 @@ func (d *databaseConnection) GetAccount(parentCtx context.Context, newAccount *a
 	defer d.mutex.Unlock()
 
 	xAccount := new(account.Account)
-	err := d.conn.QueryRow(ctx, `SELECT * FROM account WHERE id = $1 or name = $2 LIMIT 1;`, &newAccount.Id, &newAccount.Name).
+	err := d.conn.QueryRow(ctx, `SELECT * FROM account WHERE id = $1 LIMIT 1;`, &newAccount.Id).
 		Scan(&xAccount.Id, &xAccount.Name, &xAccount.CurrencyCode)
 	if err != nil && err != pgx.ErrNoRows {
 		return nil, err

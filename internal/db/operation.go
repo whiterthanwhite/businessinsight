@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"log"
-	"math"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/whiterthanwhite/businessinsight/internal/entities/operation"
@@ -45,7 +44,7 @@ func (d *databaseConnection) GetOperations(parentCtx context.Context) ([]operati
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
-	rows, err := d.conn.Query(ctx, `SELECT * FROM operation ORDER BY date_time DESC;`)
+	rows, err := d.conn.Query(ctx, `SELECT * FROM operation ORDER BY date_time DESC, entry_no;`)
 	if err != nil && err != pgx.ErrNoRows {
 		return nil, err
 	}
@@ -67,7 +66,6 @@ func (d *databaseConnection) GetOperations(parentCtx context.Context) ([]operati
 		); err != nil {
 			return nil, err
 		}
-		operation.Amount = math.Round(operation.Amount*100) / 100
 		operations = append(operations, *operation)
 	}
 
@@ -98,8 +96,6 @@ func (d *databaseConnection) GetOperation(parentCtx context.Context, newOpeartio
 	} else if err == pgx.ErrNoRows {
 		return nil, nil
 	}
-
-	operation.Amount = math.Round(operation.Amount*100) / 100
 	return operation, nil
 }
 
