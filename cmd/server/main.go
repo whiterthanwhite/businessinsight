@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,10 +14,16 @@ import (
 	"github.com/whiterthanwhite/businessinsight/internal/middleware"
 )
 
+var (
+	srvConnectStr = flag.String("s", ":8080", "server connection string")
+)
+
 func main() {
+	flag.Parse()
+
 	dbConnectionStr := os.Getenv("DBCONNECTIONSTR")
 	if dbConnectionStr == "" {
-		log.Fatalln("Database connections string is not specified!")
+		log.Fatalln("database connections string is not specified!")
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -52,9 +59,11 @@ func main() {
 	}
 
 	go func() {
+		defer cancel()
+
 		log.Println("Server started")
-		if err := http.ListenAndServe(":8080", sl); err != nil {
-			fmt.Println(err)
+		if err := http.ListenAndServe(*srvConnectStr, sl); err != nil {
+			log.Println(err.Error())
 		}
 	}()
 

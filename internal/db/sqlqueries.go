@@ -26,8 +26,10 @@ const (
 		CREATE TABLE operation (
 			entry_no bigserial PRIMARY KEY,
 			date_time timestamp,
+			creation_date date,
+			creation_time time,
 			type operation_type NOT NULL,
-			amount double precision,
+			amount DECIMAL(20, 10),
 			source_id smallint REFERENCES account,
 			currency_code varchar(10) REFERENCES currency,
 			category_id smallint REFERENCES category,

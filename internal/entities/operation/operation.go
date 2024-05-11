@@ -10,6 +10,8 @@ import (
 type Operation struct {
 	EntryNo       int                          `json:"entryNo"`
 	DateTime      time.Time                    `json:"dateTime"`
+	CreationDate  time.Time                    `json:"creation_date,omitempty"`
+	CreationTime  time.Time                    `json:"cretion_time,omitempty"`
 	Type          operation_type.OperationType `json:"type"`
 	Amount        float64                      `json:"amount"`
 	SourceId      int                          `json:"sourceId"`
@@ -22,6 +24,8 @@ type Operation struct {
 type operationJSON struct {
 	EntryNo       int                          `json:"entryNo"`
 	DateTime      string                       `json:"dateTime"`
+	CreationDate  time.Time                    `json:"creation_date,omitempty"`
+	CreationTime  time.Time                    `json:"cretion_time,omitempty"`
 	Type          operation_type.OperationType `json:"type"`
 	Amount        float64                      `json:"amount"`
 	SourceId      int                          `json:"sourceId"`

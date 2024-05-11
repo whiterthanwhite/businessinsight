@@ -17,8 +17,8 @@ func (d *databaseConnection) InsertOperation(parentCtx context.Context, newOpera
 
 	ct, err := d.conn.Exec(ctx,
 		`
-		INSERT INTO operation (date_time, type, amount, source_id, currency_code, category_id, transaction_no, description)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
+		INSERT INTO operation (date_time, type, amount, source_id, currency_code, category_id, transaction_no, description, creation_date, creation_time)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
 		`,
 		&newOperation.DateTime,
 		&newOperation.Type,
@@ -28,6 +28,8 @@ func (d *databaseConnection) InsertOperation(parentCtx context.Context, newOpera
 		&newOperation.CategoryId,
 		&newOperation.TransactionNo,
 		&newOperation.Description,
+		&newOperation.CreationDate,
+		&newOperation.CreationTime,
 	)
 	if err != nil {
 		return err
@@ -44,7 +46,7 @@ func (d *databaseConnection) GetOperations(parentCtx context.Context) ([]operati
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
-	rows, err := d.conn.Query(ctx, `SELECT * FROM operation ORDER BY date_time DESC, entry_no;`)
+	rows, err := d.conn.Query(ctx, `SELECT * FROM operation ORDER BY creation_date DESC, transaction_no, entry_no DESC;`)
 	if err != nil && err != pgx.ErrNoRows {
 		return nil, err
 	}
@@ -63,6 +65,8 @@ func (d *databaseConnection) GetOperations(parentCtx context.Context) ([]operati
 			&operation.CategoryId,
 			&operation.TransactionNo,
 			&operation.Description,
+			&operation.CreationDate,
+			&operation.CreationTime,
 		); err != nil {
 			return nil, err
 		}
@@ -90,6 +94,8 @@ func (d *databaseConnection) GetOperation(parentCtx context.Context, newOpeartio
 		&operation.CategoryId,
 		&operation.TransactionNo,
 		&operation.Description,
+		&operation.CreationDate,
+		&operation.CreationTime,
 	)
 	if err != nil && err != pgx.ErrNoRows {
 		return nil, err
@@ -109,7 +115,7 @@ func (d *databaseConnection) UpdateOperation(parentCtx context.Context, newOpera
 	ct, err := d.conn.Exec(ctx,
 		`
 		UPDATE operation
-		SET date_time = $1, type = $2, amount = $3, source_id = $4, currency_code = $5, category_id = $6, transaction_no = $7, description = $8
+		SET date_time = $1, type = $2, amount = $3, source_id = $4, currency_code = $5, category_id = $6, transaction_no = $7, description = $8, creation_date = $10, creation_time = $11
 		WHERE entry_no = $9;
 		`,
 		&newOperation.DateTime,
@@ -121,6 +127,8 @@ func (d *databaseConnection) UpdateOperation(parentCtx context.Context, newOpera
 		&newOperation.TransactionNo,
 		&newOperation.Description,
 		&newOperation.EntryNo,
+		&newOperation.CreationDate,
+		&newOperation.CreationTime,
 	)
 	if err != nil {
 		return err

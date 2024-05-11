@@ -120,12 +120,13 @@ func Connect(parentCtx context.Context, connectionStr string) (*databaseConnecti
 		return dbConn, nil
 	}
 	ctx, _ := context.WithCancel(parentCtx)
-	dbConn = new(databaseConnection)
+	conn := new(databaseConnection)
 	var err error
-	dbConn.conn, err = pgx.Connect(ctx, connectionStr)
+	conn.conn, err = pgx.Connect(ctx, connectionStr)
 	if err != nil {
 		return nil, err
 	}
+	dbConn = conn
 	return dbConn, nil
 }
 
